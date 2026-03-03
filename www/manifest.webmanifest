@@ -1,0 +1,25 @@
+{
+  "name": "宝贝晚安",
+  "short_name": "宝贝晚安",
+  "description": "婴儿睡眠白噪音模拟器，帮助宝宝安睡。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#5A4A42",
+  "theme_color": "#5A4A42",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "./images/pwa-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./images/pwa-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

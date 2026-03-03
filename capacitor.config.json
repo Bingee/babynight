@@ -1,0 +1,16 @@
+{
+  "appId": "com.babysleep.whitenoise",
+  "appName": "宝贝晚安",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1000,
+      "backgroundColor": "#667eea",
+      "showSpinner": false
+    }
+  }
+}

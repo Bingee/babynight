@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="婴儿睡眠白噪音模拟器 - 帮助宝宝安睡的舒缓声音">
+    <meta name="theme-color" content="#5A4A42">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>宝宝白噪音</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="images/pwa-icon.png" type="image/png">
+    <link rel="apple-touch-icon" href="images/pwa-icon.png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sound Cards Grid -->
+        <main class="sound-grid">
+            <div class="sound-card" data-sound="rain">
+                <div class="card-image">
+                    <img src="images/rain.png" alt="雨声" onerror="this.style.display='none'">
+                    <span class="emoji-fallback">🌧️</span>
+                </div>
+                <span class="card-label">雨声</span>
+                <div class="playing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <div class="sound-card" data-sound="ocean">
+                <div class="card-image">
+                    <img src="images/ocean.png" alt="海浪" onerror="this.style.display='none'">
+                    <span class="emoji-fallback">🌊</span>
+                </div>
+                <span class="card-label">海浪</span>
+                <div class="playing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <div class="sound-card" data-sound="wind">
+                <div class="card-image">
+                    <img src="images/wind.png" alt="风声" onerror="this.style.display='none'">
+                    <span class="emoji-fallback">💨</span>
+                </div>
+                <span class="card-label">风声</span>
+                <div class="playing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <div class="sound-card" data-sound="heartbeat">
+                <div class="card-image">
+                    <img src="images/heartbeat.png" alt="心跳" onerror="this.style.display='none'">
+                    <span class="emoji-fallback">💓</span>
+                </div>
+                <span class="card-label">心跳</span>
+                <div class="playing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <div class="sound-card" data-sound="whitenoise">
+                <div class="card-image">
+                    <img src="images/whitenoise.png" alt="白噪音" onerror="this.style.display='none'">
+                    <span class="emoji-fallback">📺</span>
+                </div>
+                <span class="card-label">白噪音</span>
+                <div class="playing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <div class="sound-card" data-sound="forest">
+                <div class="card-image">
+                    <img src="images/forest.png" alt="森林" onerror="this.style.display='none'">
+                    <span class="emoji-fallback">🌲</span>
+                </div>
+                <span class="card-label">森林</span>
+                <div class="playing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <div class="sound-card" data-sound="night">
+                <div class="card-image">
+                    <img src="images/night.png" alt="夜晚" onerror="this.style.display='none'">
+                    <span class="emoji-fallback">🌙</span>
+                </div>
+                <span class="card-label">夜晚</span>
+                <div class="playing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <div class="sound-card" data-sound="clock">
+                <div class="card-image">
+                    <img src="images/clock.png" alt="钟摆" onerror="this.style.display='none'">
+                    <span class="emoji-fallback">⏰</span>
+                </div>
+                <span class="card-label">钟摆</span>
+                <div class="playing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <div class="sound-card" data-sound="water">
+                <div class="card-image">
+                    <img src="images/water.png" alt="水流" onerror="this.style.display='none'">
+                    <span class="emoji-fallback">💧</span>
+                </div>
+                <span class="card-label">水流</span>
+                <div class="playing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <div class="sound-card" data-sound="shush">
+                <div class="card-image">
+                    <img src="images/shush.png" alt="哄睡" onerror="this.style.display='none'">
+                    <span class="emoji-fallback">🤫</span>
+                </div>
+                <span class="card-label">哄睡</span>
+                <div class="playing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Controls Panel -->
+        <section class="controls-panel">
+            <!-- Volume Control -->
+            <div class="control-group">
+                <div class="control-header">
+                    <span class="control-icon">🔊</span>
+                    <span class="control-label">音量</span>
+                    <span class="control-value" id="volume-value">70%</span>
+                </div>
+                <input type="range" class="slider volume-slider" id="volume-slider" min="0" max="100" value="70">
+            </div>
+
+            <!-- Timer Control -->
+            <div class="control-group">
+                <div class="control-header">
+                    <span class="control-icon">⏱️</span>
+                    <span class="control-label">定时</span>
+                    <span class="control-value" id="timer-value">关闭</span>
+                </div>
+                <div class="timer-buttons">
+                    <button class="timer-btn" data-minutes="0">关闭</button>
+                    <button class="timer-btn" data-minutes="15">15分</button>
+                    <button class="timer-btn" data-minutes="30">30分</button>
+                    <button class="timer-btn" data-minutes="45">45分</button>
+                    <button class="timer-btn" data-minutes="60">1小时</button>
+                    <button class="timer-btn" data-minutes="120">2小时</button>
+                </div>
+            </div>
+
+            <!-- Timer Countdown Display -->
+            <div class="countdown-display" id="countdown-display">
+                <span class="countdown-icon">💤</span>
+                <span class="countdown-text" id="countdown-text">--:--</span>
+            </div>
+        </section>
+
+        <!-- Play/Stop Button -->
+        <div class="play-button-container">
+            <button class="play-button" id="play-button">
+                <div class="play-indicator" id="play-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+                <span class="play-icon" id="play-icon">▶️</span>
+                <span class="play-text">开始播放</span>
+            </button>
+        </div>
+
+        <!-- Author Dedication -->
+        <div class="author-dedication">
+            <span class="author-link" id="author-link">💝 献给我们的宝贝</span>
+        </div>
+    </div>
+
+    <!-- Blessing Dialog -->
+    <div class="blessing-overlay" id="blessing-overlay">
+        <div class="blessing-card">
+            <div class="blessing-emoji">👶💕</div>
+            <p class="blessing-text">
+                仅以此App献给我的宝贝Leo，愿他一生想睡就睡，永远快乐，健康成长。
+            </p>
+            <p class="blessing-author">—— 爱你的 Bingee & Summer妈妈</p>
+            <button class="blessing-close-btn" id="blessing-close">
+                🌙 愿天下所有宝贝好眠
+            </button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Blessing dialog functionality
+        const authorLink = document.getElementById('author-link');
+        const blessingOverlay = document.getElementById('blessing-overlay');
+        const blessingClose = document.getElementById('blessing-close');
+
+        authorLink.addEventListener('click', () => {
+            blessingOverlay.classList.add('active');
+        });
+
+        blessingClose.addEventListener('click', () => {
+            blessingOverlay.classList.remove('active');
+        });
+
+        blessingOverlay.addEventListener('click', (e) => {
+            if (e.target === blessingOverlay) {
+                blessingOverlay.classList.remove('active');
+            }
+        });
+
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(() => {});
+            });
+        }
+    </script>
+</body>
+
+</html>
