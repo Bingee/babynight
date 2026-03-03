@@ -10,9 +10,179 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>宝宝白噪音</title>
     <link rel="manifest" href="manifest.webmanifest">
-    <link rel="icon" href="images/pwa-icon.png" type="image/png">
-    <link rel="apple-touch-icon" href="images/pwa-icon.png">
+    <link rel="icon" href="images/android-app-icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="images/android-app-icon-192.png">
     <link rel="stylesheet" href="styles.css">
+    <style>
+        .controls-panel .music-open-btn {
+            width: 100%;
+            border: none;
+            border-radius: 14px;
+            padding: 13px 16px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, #5c6bc0 0%, #7b61ff 100%);
+            cursor: pointer;
+            transition: transform .2s ease, box-shadow .2s ease;
+        }
+
+        .controls-panel .music-open-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(92, 107, 192, 0.35);
+        }
+
+        .music-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1600;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background: rgba(10, 16, 40, 0.58);
+            backdrop-filter: blur(6px);
+        }
+
+        .music-modal-overlay.active {
+            display: flex;
+        }
+
+        .music-modal {
+            width: min(620px, 100%);
+            max-height: min(82vh, 780px);
+            overflow: hidden;
+            border-radius: 18px;
+            background: var(--card-gradient);
+            box-shadow: 0 26px 70px rgba(0, 0, 0, 0.28);
+            border: 1px solid rgba(140, 152, 255, 0.22);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .music-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: linear-gradient(145deg, #ffffff 0%, #f7f8ff 100%);
+            padding-bottom: 8px;
+        }
+
+        .music-modal-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: var(--text-primary);
+        }
+
+        .music-close-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            background: rgba(140, 152, 255, 0.18);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .music-modal-desc {
+            margin: 0 0 12px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .music-track-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            overflow: auto;
+            padding-right: 2px;
+        }
+
+        .music-track-item {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(140, 152, 255, 0.22);
+            background: var(--card-bg);
+        }
+
+        .music-track-title {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .music-track-subtitle {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .music-track-play {
+            border: none;
+            border-radius: 999px;
+            padding: 8px 14px;
+            min-width: 62px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #fff;
+            cursor: pointer;
+            background: linear-gradient(135deg, #31b6ff 0%, #0d84ff 100%);
+        }
+
+        .music-track-play.playing {
+            background: linear-gradient(135deg, #ff7f9f 0%, #ff6b6b 100%);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .music-modal-overlay {
+                background: rgba(4, 8, 20, 0.72);
+            }
+
+            .music-modal {
+                background: linear-gradient(145deg, rgba(32, 38, 64, 0.98) 0%, rgba(20, 24, 44, 0.98) 100%);
+                border-color: rgba(140, 152, 255, 0.35);
+            }
+
+            .music-modal-header {
+                background: linear-gradient(145deg, rgba(32, 38, 64, 0.98) 0%, rgba(20, 24, 44, 0.98) 100%);
+            }
+
+            .music-track-item {
+                background: rgba(36, 44, 75, 0.95);
+                border-color: rgba(140, 152, 255, 0.26);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .music-modal {
+                padding: 14px;
+                max-height: 84vh;
+            }
+
+            .music-track-item {
+                grid-template-columns: 1fr;
+                align-items: stretch;
+            }
+
+            .music-track-play {
+                width: 100%;
+            }
+        }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
@@ -167,6 +337,16 @@
                 <span class="countdown-icon">💤</span>
                 <span class="countdown-text" id="countdown-text">--:--</span>
             </div>
+
+            <!-- Music Section -->
+            <div class="control-group">
+                <div class="control-header">
+                    <span class="control-icon">🎵</span>
+                    <span class="control-label">睡眠音乐</span>
+                    <span class="control-value">10首</span>
+                </div>
+                <button class="music-open-btn" id="open-music-modal">打开音乐列表</button>
+            </div>
         </section>
 
         <!-- Play/Stop Button -->
@@ -200,6 +380,18 @@
         </div>
     </div>
 
+    <!-- Music Modal -->
+    <div class="music-modal-overlay" id="music-modal-overlay">
+        <div class="music-modal">
+            <div class="music-modal-header">
+                <h3>宝贝睡眠音乐</h3>
+                <button class="music-close-btn" id="music-close-btn">✕</button>
+            </div>
+            <p class="music-modal-desc">轻触播放可试听，切换曲目会自动停止上一首。</p>
+            <div class="music-track-list" id="music-track-list"></div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
     <script>
         // Blessing dialog functionality
@@ -221,7 +413,8 @@
             }
         });
 
-        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+        const isLocalHost = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+        if ('serviceWorker' in navigator && location.protocol !== 'file:' && !isLocalHost) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js').catch(() => {});
             });

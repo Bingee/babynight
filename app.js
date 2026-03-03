@@ -18,6 +18,61 @@ class WhiteNoiseApp {
 
         // Sound nodes
         this.soundNodes = {};
+        this.musicAudio = null;
+        this.currentMusicIndex = -1;
+        this.iosPlaybackUnlocked = false;
+        this.musicTracks = [
+            {
+                title: '勃拉姆斯摇篮曲',
+                subtitle: 'Brahms Lullaby (Instrumental)',
+                url: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/55/d7/d3/55d7d304-f1a3-43ab-5a8e-d29f01e8c478/mzaf_1283052914341102402.plus.aac.p.m4a'
+            },
+            {
+                title: 'Canon In D - Pachelbel',
+                subtitle: 'Canon in D (Piano Version)',
+                url: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/0f/a2/eb/0fa2eb13-3ba0-45e3-5951-6895fbd1276c/mzaf_7775935010953823655.plus.aac.p.m4a'
+            },
+            {
+                title: '舒伯特小夜曲',
+                subtitle: 'Schubert Serenade',
+                url: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/b8/e2/dd/b8e2dda8-96d0-d6be-c714-71ea5756859f/mzaf_11752488472823576992.plus.aac.p.m4a'
+            },
+            {
+                title: '德彪西 月光',
+                subtitle: 'Clair de lune (Piano)',
+                url: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/d7/9b/60/d79b60be-d4a4-4fa4-9a5e-d4816fbf21c1/mzaf_5469805616228469371.plus.aac.p.m4a'
+            },
+            {
+                title: '萨蒂 Gymnopedie No.1',
+                subtitle: 'Gymnopedie No.1',
+                url: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/37/76/1e/37761ecb-6bda-ac5a-2c40-d1b378a23e30/mzaf_15716201396115900232.plus.aac.p.m4a'
+            },
+            {
+                title: '巴赫 G弦上的咏叹调',
+                subtitle: 'Air on the G String',
+                url: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/c4/13/ce/c413ced2-c02a-510d-16bf-06a35513d744/mzaf_10995439643064779193.plus.aac.p.m4a'
+            },
+            {
+                title: '肖邦 夜曲 Op.9 No.2',
+                subtitle: 'Nocturne Op.9 No.2',
+                url: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview116/v4/d5/c6/b7/d5c6b726-f344-d0b6-4289-661b948b870d/mzaf_9984648612855440043.plus.aac.p.m4a'
+            },
+            {
+                title: '舒曼 梦幻曲',
+                subtitle: 'Traumerei (Kinderszenen)',
+                url: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/f0/05/60/f0056002-b395-d633-e518-1f8584c8c762/mzaf_30035179335371066.plus.aac.p.m4a'
+            },
+            {
+                title: '圣桑 天鹅',
+                subtitle: 'The Swan',
+                url: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/bd/9d/36/bd9d3694-6fc8-fbef-4283-c431eea838f0/mzaf_11411301538877085598.plus.aac.p.m4a'
+            },
+            {
+                title: '莫扎特 摇篮曲',
+                subtitle: 'Mozart Lullaby',
+                url: 'https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/30/ea/26/30ea26ee-99a3-f09a-f453-be98ae8c06b5/mzaf_6709180713786063716.plus.aac.p.m4a'
+            }
+        ];
 
         // DOM Elements
         this.soundCards = document.querySelectorAll('.sound-card');
@@ -28,6 +83,10 @@ class WhiteNoiseApp {
         this.countdownDisplay = document.getElementById('countdown-display');
         this.countdownText = document.getElementById('countdown-text');
         this.playButton = document.getElementById('play-button');
+        this.openMusicModalButton = document.getElementById('open-music-modal');
+        this.musicModalOverlay = document.getElementById('music-modal-overlay');
+        this.musicCloseButton = document.getElementById('music-close-btn');
+        this.musicTrackList = document.getElementById('music-track-list');
 
         // Initialize
         this.init();
@@ -43,6 +102,8 @@ class WhiteNoiseApp {
 
         // Event listeners
         this.setupEventListeners();
+        this.initMusicTracks();
+        this.setupIOSSilentModeWorkaround();
     }
 
     setupEventListeners() {
@@ -66,6 +127,9 @@ class WhiteNoiseApp {
             if (this.masterGainNode) {
                 this.masterGainNode.gain.setValueAtTime(volume / 100, this.audioContext.currentTime);
             }
+            if (this.musicAudio) {
+                this.musicAudio.volume = volume / 100;
+            }
         });
 
         // Timer buttons
@@ -79,6 +143,26 @@ class WhiteNoiseApp {
         this.playButton.addEventListener('click', () => {
             this.togglePlay();
         });
+
+        if (this.openMusicModalButton) {
+            this.openMusicModalButton.addEventListener('click', () => {
+                this.musicModalOverlay.classList.add('active');
+            });
+        }
+
+        if (this.musicCloseButton) {
+            this.musicCloseButton.addEventListener('click', () => {
+                this.musicModalOverlay.classList.remove('active');
+            });
+        }
+
+        if (this.musicModalOverlay) {
+            this.musicModalOverlay.addEventListener('click', (e) => {
+                if (e.target === this.musicModalOverlay) {
+                    this.musicModalOverlay.classList.remove('active');
+                }
+            });
+        }
     }
 
     selectSound(soundName) {
@@ -123,6 +207,7 @@ class WhiteNoiseApp {
     async play() {
         await this.initAudioContext();
 
+        this.stopMusicPlayback();
         this.isPlaying = true;
         this.playSound(this.currentSound);
         this.updatePlayButton();
@@ -202,6 +287,129 @@ class WhiteNoiseApp {
             this.soundNodes.current.stop();
             this.soundNodes.current = null;
         }
+    }
+
+    initMusicTracks() {
+        if (!this.musicTrackList) return;
+
+        this.musicTrackList.innerHTML = '';
+        this.musicTracks.forEach((track, index) => {
+            const row = document.createElement('div');
+            row.className = 'music-track-item';
+            row.innerHTML = `
+                <div class="music-track-meta">
+                    <div class="music-track-title">${track.title}</div>
+                    <div class="music-track-subtitle">${track.subtitle}</div>
+                </div>
+                <button class="music-track-play" data-index="${index}">播放</button>
+            `;
+            this.musicTrackList.appendChild(row);
+        });
+
+        this.musicTrackList.addEventListener('click', (e) => {
+            const button = e.target.closest('.music-track-play');
+            if (!button) return;
+            const index = parseInt(button.dataset.index, 10);
+            this.playMusicTrack(index);
+        });
+    }
+
+    getMusicAudio() {
+        if (!this.musicAudio) {
+            this.musicAudio = new Audio();
+            this.musicAudio.loop = true;
+            this.musicAudio.preload = 'none';
+            this.musicAudio.playsInline = true;
+            this.musicAudio.setAttribute('playsinline', 'true');
+            this.musicAudio.setAttribute('webkit-playsinline', 'true');
+            this.musicAudio.addEventListener('pause', () => this.updateMusicTrackButtons());
+            this.musicAudio.addEventListener('ended', () => this.updateMusicTrackButtons());
+            this.musicAudio.addEventListener('error', () => {
+                this.updateMusicTrackButtons();
+                alert('当前音乐加载失败，请稍后重试。');
+            });
+        }
+        return this.musicAudio;
+    }
+
+    async playMusicTrack(index) {
+        const track = this.musicTracks[index];
+        if (!track) return;
+
+        const audio = this.getMusicAudio();
+        if (this.currentMusicIndex === index && !audio.paused) {
+            audio.pause();
+            return;
+        }
+
+        if (this.isPlaying) {
+            this.stop();
+        }
+
+        this.currentMusicIndex = index;
+        audio.src = track.url;
+        audio.volume = this.volumeSlider.value / 100;
+
+        try {
+            await audio.play();
+        } catch (error) {
+            console.error('Music play failed:', error);
+            alert('播放失败，请先和页面进行一次交互后再试。');
+        }
+
+        this.updateMusicTrackButtons();
+    }
+
+    stopMusicPlayback() {
+        if (!this.musicAudio) return;
+        this.musicAudio.pause();
+        this.currentMusicIndex = -1;
+        this.updateMusicTrackButtons();
+    }
+
+    updateMusicTrackButtons() {
+        if (!this.musicTrackList) return;
+        const buttons = this.musicTrackList.querySelectorAll('.music-track-play');
+        buttons.forEach((button) => {
+            const index = parseInt(button.dataset.index, 10);
+            const active = this.musicAudio && !this.musicAudio.paused && this.currentMusicIndex === index;
+            button.classList.toggle('playing', active);
+            button.textContent = active ? '暂停' : '播放';
+        });
+    }
+
+    setupIOSSilentModeWorkaround() {
+        const ua = navigator.userAgent || '';
+        const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        if (!isIOS) return;
+
+        const unlock = async () => {
+            if (this.iosPlaybackUnlocked) return;
+            this.iosPlaybackUnlocked = true;
+
+            try {
+                if (navigator.audioSession && navigator.audioSession.type !== 'playback') {
+                    navigator.audioSession.type = 'playback';
+                }
+            } catch (error) {
+                console.warn('audioSession API not available:', error);
+            }
+
+            try {
+                await this.initAudioContext();
+                const buffer = this.audioContext.createBuffer(1, 1, 22050);
+                const source = this.audioContext.createBufferSource();
+                source.buffer = buffer;
+                source.connect(this.audioContext.destination);
+                source.start(0);
+                source.stop(0.001);
+            } catch (error) {
+                console.warn('iOS audio unlock failed:', error);
+            }
+        };
+
+        document.addEventListener('touchstart', unlock, { once: true, passive: true });
+        document.addEventListener('click', unlock, { once: true, passive: true });
     }
 
     // ===== Sound Generators =====
@@ -1036,6 +1244,7 @@ class WhiteNoiseApp {
 
         if (remaining <= 0) {
             this.stop();
+            this.stopMusicPlayback();
             this.countdownText.textContent = '00:00';
             return;
         }

@@ -1,11 +1,12 @@
-const CACHE_NAME = 'baby-white-noise-v1';
+const CACHE_NAME = 'baby-white-noise-v2';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
   './app.js',
   './manifest.webmanifest',
-  './images/pwa-icon.png',
+  './images/android-app-icon-192.png',
+  './images/android-app-icon-512.png',
   './images/rain.png',
   './images/ocean.png',
   './images/wind.png',
