@@ -5,7 +5,9 @@
   "main": "index.html",
   "scripts": {
     "start": "npx serve .",
-    "build": "npx cap sync"
+    "generate:audio": "python3 scripts/generate_lullabies.py",
+    "sync:web": "node scripts/sync-web.mjs",
+    "build": "npm run sync:web && npx @capacitor/cli sync"
   },
   "keywords": [
     "baby",

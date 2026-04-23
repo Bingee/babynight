@@ -12,177 +12,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="images/android-app-icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="images/android-app-icon-192.png">
-    <link rel="stylesheet" href="styles.css">
-    <style>
-        .controls-panel .music-open-btn {
-            width: 100%;
-            border: none;
-            border-radius: 14px;
-            padding: 13px 16px;
-            font-family: inherit;
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: #fff;
-            background: linear-gradient(135deg, #5c6bc0 0%, #7b61ff 100%);
-            cursor: pointer;
-            transition: transform .2s ease, box-shadow .2s ease;
-        }
-
-        .controls-panel .music-open-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 24px rgba(92, 107, 192, 0.35);
-        }
-
-        .music-modal-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 1600;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            background: rgba(10, 16, 40, 0.58);
-            backdrop-filter: blur(6px);
-        }
-
-        .music-modal-overlay.active {
-            display: flex;
-        }
-
-        .music-modal {
-            width: min(620px, 100%);
-            max-height: min(82vh, 780px);
-            overflow: hidden;
-            border-radius: 18px;
-            background: var(--card-gradient);
-            box-shadow: 0 26px 70px rgba(0, 0, 0, 0.28);
-            border: 1px solid rgba(140, 152, 255, 0.22);
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .music-modal-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            position: sticky;
-            top: 0;
-            z-index: 2;
-            background: linear-gradient(145deg, #ffffff 0%, #f7f8ff 100%);
-            padding-bottom: 8px;
-        }
-
-        .music-modal-header h3 {
-            margin: 0;
-            font-size: 1.25rem;
-            color: var(--text-primary);
-        }
-
-        .music-close-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
-            background: rgba(140, 152, 255, 0.18);
-            color: var(--text-primary);
-            font-size: 1rem;
-        }
-
-        .music-modal-desc {
-            margin: 0 0 12px;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .music-track-list {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 10px;
-            overflow: auto;
-            padding-right: 2px;
-        }
-
-        .music-track-item {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            align-items: center;
-            gap: 12px;
-            padding: 12px;
-            border-radius: 12px;
-            border: 1px solid rgba(140, 152, 255, 0.22);
-            background: var(--card-bg);
-        }
-
-        .music-track-title {
-            font-size: 0.98rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 2px;
-        }
-
-        .music-track-subtitle {
-            font-size: 0.82rem;
-            color: var(--text-secondary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .music-track-play {
-            border: none;
-            border-radius: 999px;
-            padding: 8px 14px;
-            min-width: 62px;
-            font-size: 0.82rem;
-            font-weight: 700;
-            color: #fff;
-            cursor: pointer;
-            background: linear-gradient(135deg, #31b6ff 0%, #0d84ff 100%);
-        }
-
-        .music-track-play.playing {
-            background: linear-gradient(135deg, #ff7f9f 0%, #ff6b6b 100%);
-        }
-
-        @media (prefers-color-scheme: dark) {
-            .music-modal-overlay {
-                background: rgba(4, 8, 20, 0.72);
-            }
-
-            .music-modal {
-                background: linear-gradient(145deg, rgba(32, 38, 64, 0.98) 0%, rgba(20, 24, 44, 0.98) 100%);
-                border-color: rgba(140, 152, 255, 0.35);
-            }
-
-            .music-modal-header {
-                background: linear-gradient(145deg, rgba(32, 38, 64, 0.98) 0%, rgba(20, 24, 44, 0.98) 100%);
-            }
-
-            .music-track-item {
-                background: rgba(36, 44, 75, 0.95);
-                border-color: rgba(140, 152, 255, 0.26);
-            }
-        }
-
-        @media (max-width: 480px) {
-            .music-modal {
-                padding: 14px;
-                max-height: 84vh;
-            }
-
-            .music-track-item {
-                grid-template-columns: 1fr;
-                align-items: stretch;
-            }
-
-            .music-track-play {
-                width: 100%;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css?v=20260423-38">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
@@ -190,236 +20,253 @@
 
 <body>
     <div class="app-container">
-        <!-- Sound Cards Grid -->
-        <main class="sound-grid">
-            <div class="sound-card" data-sound="rain">
-                <div class="card-image">
-                    <img src="images/rain.png" alt="雨声" onerror="this.style.display='none'">
-                    <span class="emoji-fallback">🌧️</span>
-                </div>
-                <span class="card-label">雨声</span>
-                <div class="playing-indicator">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
+        <div class="top-bar">
+            <section class="mode-switch" aria-label="内容切换">
+                <button class="mode-tab active" type="button" id="tab-noise" data-view="noise" aria-selected="true">
+                    <span class="mode-tab-title">白噪音</span>
+                </button>
+                <button class="mode-tab" type="button" id="tab-music" data-view="music" aria-selected="false">
+                    <span class="mode-tab-title">睡眠音乐</span>
+                </button>
+            </section>
+        </div>
 
-            <div class="sound-card" data-sound="ocean">
-                <div class="card-image">
-                    <img src="images/ocean.png" alt="海浪" onerror="this.style.display='none'">
-                    <span class="emoji-fallback">🌊</span>
+        <section class="content-panel sound-panel active" id="noise-panel">
+            <main class="sound-grid" aria-label="白噪音声音列表">
+                <div class="sound-card" data-sound="rain">
+                    <div class="card-image">
+                        <img src="images/rain.png" alt="雨声" decoding="async">
+                        <span class="emoji-fallback">🌧️</span>
+                    </div>
+                    <span class="card-label">雨声</span>
+                    <button class="sound-card-action" type="button">播放</button>
+                    <div class="playing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
                 </div>
-                <span class="card-label">海浪</span>
-                <div class="playing-indicator">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
 
-            <div class="sound-card" data-sound="wind">
-                <div class="card-image">
-                    <img src="images/wind.png" alt="风声" onerror="this.style.display='none'">
-                    <span class="emoji-fallback">💨</span>
+                <div class="sound-card" data-sound="ocean">
+                    <div class="card-image">
+                        <img src="images/ocean.png" alt="海浪" decoding="async">
+                        <span class="emoji-fallback">🌊</span>
+                    </div>
+                    <span class="card-label">海浪</span>
+                    <button class="sound-card-action" type="button">播放</button>
+                    <div class="playing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
                 </div>
-                <span class="card-label">风声</span>
-                <div class="playing-indicator">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
 
-            <div class="sound-card" data-sound="heartbeat">
-                <div class="card-image">
-                    <img src="images/heartbeat.png" alt="心跳" onerror="this.style.display='none'">
-                    <span class="emoji-fallback">💓</span>
+                <div class="sound-card" data-sound="wind">
+                    <div class="card-image">
+                        <img src="images/wind.png" alt="风声" decoding="async">
+                        <span class="emoji-fallback">💨</span>
+                    </div>
+                    <span class="card-label">风声</span>
+                    <button class="sound-card-action" type="button">播放</button>
+                    <div class="playing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
                 </div>
-                <span class="card-label">心跳</span>
-                <div class="playing-indicator">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
 
-            <div class="sound-card" data-sound="whitenoise">
-                <div class="card-image">
-                    <img src="images/whitenoise.png" alt="白噪音" onerror="this.style.display='none'">
-                    <span class="emoji-fallback">📺</span>
+                <div class="sound-card" data-sound="heartbeat">
+                    <div class="card-image">
+                        <img src="images/heartbeat.png" alt="心跳" decoding="async">
+                        <span class="emoji-fallback">💓</span>
+                    </div>
+                    <span class="card-label">心跳</span>
+                    <button class="sound-card-action" type="button">播放</button>
+                    <div class="playing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
                 </div>
-                <span class="card-label">白噪音</span>
-                <div class="playing-indicator">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
 
-            <div class="sound-card" data-sound="forest">
-                <div class="card-image">
-                    <img src="images/forest.png" alt="森林" onerror="this.style.display='none'">
-                    <span class="emoji-fallback">🌲</span>
+                <div class="sound-card" data-sound="whitenoise">
+                    <div class="card-image">
+                        <img src="images/whitenoise.png" alt="白噪音" decoding="async">
+                        <span class="emoji-fallback">📺</span>
+                    </div>
+                    <span class="card-label">白噪音</span>
+                    <button class="sound-card-action" type="button">播放</button>
+                    <div class="playing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
                 </div>
-                <span class="card-label">森林</span>
-                <div class="playing-indicator">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
 
-            <div class="sound-card" data-sound="night">
-                <div class="card-image">
-                    <img src="images/night.png" alt="夜晚" onerror="this.style.display='none'">
-                    <span class="emoji-fallback">🌙</span>
+                <div class="sound-card" data-sound="forest">
+                    <div class="card-image">
+                        <img src="images/forest.png" alt="森林" decoding="async">
+                        <span class="emoji-fallback">🌲</span>
+                    </div>
+                    <span class="card-label">森林</span>
+                    <button class="sound-card-action" type="button">播放</button>
+                    <div class="playing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
                 </div>
-                <span class="card-label">夜晚</span>
-                <div class="playing-indicator">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
 
-            <div class="sound-card" data-sound="clock">
-                <div class="card-image">
-                    <img src="images/clock.png" alt="钟摆" onerror="this.style.display='none'">
-                    <span class="emoji-fallback">⏰</span>
+                <div class="sound-card" data-sound="night">
+                    <div class="card-image">
+                        <img src="images/night.png" alt="夜晚" decoding="async">
+                        <span class="emoji-fallback">🌙</span>
+                    </div>
+                    <span class="card-label">夜晚</span>
+                    <button class="sound-card-action" type="button">播放</button>
+                    <div class="playing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
                 </div>
-                <span class="card-label">钟摆</span>
-                <div class="playing-indicator">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
 
-            <div class="sound-card" data-sound="water">
-                <div class="card-image">
-                    <img src="images/water.png" alt="水流" onerror="this.style.display='none'">
-                    <span class="emoji-fallback">💧</span>
+                <div class="sound-card" data-sound="clock">
+                    <div class="card-image">
+                        <img src="images/clock.png" alt="钟摆" decoding="async">
+                        <span class="emoji-fallback">⏰</span>
+                    </div>
+                    <span class="card-label">钟摆</span>
+                    <button class="sound-card-action" type="button">播放</button>
+                    <div class="playing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
                 </div>
-                <span class="card-label">水流</span>
-                <div class="playing-indicator">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
 
-            <div class="sound-card" data-sound="shush">
-                <div class="card-image">
-                    <img src="images/shush.png" alt="哄睡" onerror="this.style.display='none'">
-                    <span class="emoji-fallback">🤫</span>
+                <div class="sound-card" data-sound="water">
+                    <div class="card-image">
+                        <img src="images/water.png" alt="水流" decoding="async">
+                        <span class="emoji-fallback">💧</span>
+                    </div>
+                    <span class="card-label">水流</span>
+                    <button class="sound-card-action" type="button">播放</button>
+                    <div class="playing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
                 </div>
-                <span class="card-label">哄睡</span>
-                <div class="playing-indicator">
-                    <span></span><span></span><span></span>
-                </div>
-            </div>
-        </main>
 
-        <!-- Controls Panel -->
-        <section class="controls-panel">
-            <!-- Volume Control -->
-            <div class="control-group">
-                <div class="control-header">
-                    <span class="control-icon">🔊</span>
-                    <span class="control-label">音量</span>
-                    <span class="control-value" id="volume-value">70%</span>
+                <div class="sound-card" data-sound="shush">
+                    <div class="card-image">
+                        <img src="images/shush.png" alt="哄睡" decoding="async">
+                        <span class="emoji-fallback">🤫</span>
+                    </div>
+                    <span class="card-label">哄睡</span>
+                    <button class="sound-card-action" type="button">播放</button>
+                    <div class="playing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
                 </div>
-                <input type="range" class="slider volume-slider" id="volume-slider" min="0" max="100" value="70">
-            </div>
+            </main>
+        </section>
 
-            <!-- Timer Control -->
-            <div class="control-group">
-                <div class="control-header">
-                    <span class="control-icon">⏱️</span>
-                    <span class="control-label">定时</span>
-                    <span class="control-value" id="timer-value">关闭</span>
-                </div>
-                <div class="timer-buttons">
-                    <button class="timer-btn" data-minutes="0">关闭</button>
-                    <button class="timer-btn" data-minutes="15">15分</button>
-                    <button class="timer-btn" data-minutes="30">30分</button>
-                    <button class="timer-btn" data-minutes="45">45分</button>
-                    <button class="timer-btn" data-minutes="60">1小时</button>
-                    <button class="timer-btn" data-minutes="120">2小时</button>
-                </div>
-            </div>
+        <section class="content-panel music-panel" id="music-panel" hidden>
+            <div class="music-track-list music-track-list-inline" id="music-track-list"></div>
+            <p class="music-attribution">
+                Sleep music by Kevin MacLeod / Incompetech, licensed under CC BY 4.0.
+            </p>
+        </section>
 
-            <!-- Timer Countdown Display -->
-            <div class="countdown-display" id="countdown-display">
-                <span class="countdown-icon">💤</span>
-                <span class="countdown-text" id="countdown-text">--:--</span>
-            </div>
+        <div class="author-dedication">
+            <button class="author-link" type="button" id="author-link">献给我们的宝贝</button>
+        </div>
 
-            <!-- Music Section -->
-            <div class="control-group">
-                <div class="control-header">
-                    <span class="control-icon">🎵</span>
-                    <span class="control-label">睡眠音乐</span>
-                    <span class="control-value">10首</span>
-                </div>
-                <button class="music-open-btn" id="open-music-modal">打开音乐列表</button>
+        <section class="bottom-sheet collapsed" id="bottom-sheet" aria-label="播放控制面板">
+            <button class="bottom-sheet-handle" type="button" id="bottom-sheet-handle" aria-expanded="false" aria-controls="bottom-sheet-scroll">
+                <span class="bottom-sheet-grabber" aria-hidden="true"></span>
+                <span class="sr-only">展开或收起播放控制面板</span>
+            </button>
+
+            <div class="bottom-sheet-scroll" id="bottom-sheet-scroll">
+                <section class="controls-panel">
+                    <!-- Volume Control -->
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span class="control-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" class="control-icon-svg control-icon-volume">
+                                    <rect x="2.5" y="7.5" width="5.5" height="9" rx="2.2"></rect>
+                                    <path d="M8 9.2 12.8 5.8c.9-.6 2.2 0 2.2 1.1v10.2c0 1.1-1.3 1.8-2.2 1.1L8 14.8"></path>
+                                    <path d="M17.3 9.1a4.7 4.7 0 0 1 0 5.8"></path>
+                                    <path d="M19.4 7.2a7.4 7.4 0 0 1 0 9.6"></path>
+                                </svg>
+                            </span>
+                            <span class="control-label">音量</span>
+                            <span class="control-value" id="volume-value" aria-live="polite">70%</span>
+                        </div>
+                        <input type="range" class="slider volume-slider" id="volume-slider" min="0" max="100" value="70">
+                    </div>
+
+                    <!-- Timer Control -->
+                    <div class="control-group">
+                        <div class="control-header">
+                            <span class="control-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" class="control-icon-svg control-icon-timer">
+                                    <circle cx="12" cy="13" r="7.2"></circle>
+                                    <path d="M9.2 2.8h5.6"></path>
+                                    <path d="M12 13V9.4"></path>
+                                    <path d="m12 13 3.1 1.9"></path>
+                                    <path d="m17.4 5.4 1.7-1.7"></path>
+                                </svg>
+                            </span>
+                            <span class="control-label">定时</span>
+                            <span class="control-value" id="timer-value" aria-live="polite">关闭</span>
+                        </div>
+                        <div class="timer-buttons">
+                            <button class="timer-btn" type="button" data-minutes="0">关闭</button>
+                            <button class="timer-btn" type="button" data-minutes="15">15分</button>
+                            <button class="timer-btn" type="button" data-minutes="30">30分</button>
+                            <button class="timer-btn" type="button" data-minutes="45">45分</button>
+                            <button class="timer-btn" type="button" data-minutes="60">1小时</button>
+                            <button class="timer-btn" type="button" data-minutes="120">2小时</button>
+                        </div>
+                    </div>
+
+                    <div class="control-group theme-group">
+                        <div class="control-header">
+                            <span class="control-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" class="control-icon-svg control-icon-theme">
+                                    <path d="M13.4 3.2a8.4 8.4 0 1 0 7.4 12.4 7.4 7.4 0 0 1-7.4-12.4Z"></path>
+                                    <path d="m6.3 6.2.8-1.6.8 1.6 1.6.8-1.6.8-.8 1.6-.8-1.6-1.6-.8z"></path>
+                                </svg>
+                            </span>
+                            <span class="control-label">主题</span>
+                            <button class="theme-switch" type="button" id="theme-switch" role="switch" aria-checked="false" aria-label="切换白天或暗黑主题">
+                                <span class="theme-switch-track" aria-hidden="true">
+                                    <span class="theme-switch-thumb"></span>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Timer Countdown Display -->
+                    <div class="countdown-display" id="countdown-display" aria-live="polite">
+                        <span class="countdown-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" class="control-icon-svg control-icon-sleep">
+                                <path d="M14.5 4.1a8.4 8.4 0 1 0 5.3 13.3A7.1 7.1 0 0 1 14.5 4.1Z"></path>
+                                <path d="M7.8 6.1h3.4L8.4 9.7H12"></path>
+                                <path d="M10.9 10.6h2.6l-2 2.6h2.7"></path>
+                            </svg>
+                        </span>
+                        <span class="countdown-text" id="countdown-text">--:--</span>
+                    </div>
+                </section>
             </div>
         </section>
 
-        <!-- Play/Stop Button -->
-        <div class="play-button-container">
-            <button class="play-button" id="play-button">
-                <div class="play-indicator" id="play-indicator">
-                    <span></span><span></span><span></span>
-                </div>
-                <span class="play-icon" id="play-icon">▶️</span>
-                <span class="play-text">开始播放</span>
-            </button>
-        </div>
-
-        <!-- Author Dedication -->
-        <div class="author-dedication">
-            <span class="author-link" id="author-link">💝 献给我们的宝贝</span>
-        </div>
     </div>
 
     <!-- Blessing Dialog -->
-    <div class="blessing-overlay" id="blessing-overlay">
-        <div class="blessing-card">
-            <div class="blessing-emoji">👶💕</div>
+    <div class="blessing-overlay" id="blessing-overlay" aria-hidden="true">
+        <div class="blessing-card" role="dialog" aria-modal="true" aria-labelledby="blessing-title">
+            <h2 class="sr-only" id="blessing-title">献给宝贝的祝福</h2>
+            <img class="blessing-avatar" src="images/baby-avatar-anime.png" alt="宝贝的中国动漫风头像" decoding="async">
             <p class="blessing-text">
-                仅以此App献给我的宝贝Leo，愿他一生想睡就睡，永远快乐，健康成长。
+                把这份小小的白噪音送给宝贝Leo，愿他安睡无忧，常伴欢喜，平安健康地长大。
             </p>
-            <p class="blessing-author">—— 爱你的 Bingee & Summer妈妈</p>
-            <button class="blessing-close-btn" id="blessing-close">
-                🌙 愿天下所有宝贝好眠
+            <p class="blessing-author">—— 爱你的 Bingee爸爸 & Summer妈妈</p>
+            <button class="blessing-close-btn" type="button" id="blessing-close">
+                愿天下所有宝贝好眠
             </button>
         </div>
+        <button class="blessing-dismiss-btn" type="button" id="blessing-dismiss" aria-label="关闭祝福弹窗">×</button>
     </div>
 
-    <!-- Music Modal -->
-    <div class="music-modal-overlay" id="music-modal-overlay">
-        <div class="music-modal">
-            <div class="music-modal-header">
-                <h3>宝贝睡眠音乐</h3>
-                <button class="music-close-btn" id="music-close-btn">✕</button>
-            </div>
-            <p class="music-modal-desc">轻触播放可试听，切换曲目会自动停止上一首。</p>
-            <div class="music-track-list" id="music-track-list"></div>
-        </div>
-    </div>
-
-    <script src="app.js"></script>
-    <script>
-        // Blessing dialog functionality
-        const authorLink = document.getElementById('author-link');
-        const blessingOverlay = document.getElementById('blessing-overlay');
-        const blessingClose = document.getElementById('blessing-close');
-
-        authorLink.addEventListener('click', () => {
-            blessingOverlay.classList.add('active');
-        });
-
-        blessingClose.addEventListener('click', () => {
-            blessingOverlay.classList.remove('active');
-        });
-
-        blessingOverlay.addEventListener('click', (e) => {
-            if (e.target === blessingOverlay) {
-                blessingOverlay.classList.remove('active');
-            }
-        });
-
-        const isLocalHost = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
-        if ('serviceWorker' in navigator && location.protocol !== 'file:' && !isLocalHost) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(() => {});
-            });
-        }
-    </script>
+    <script src="app.js?v=20260423-34"></script>
 </body>
 
 </html>

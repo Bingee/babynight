@@ -1,4 +1,4 @@
-const CACHE_NAME = 'baby-white-noise-v2';
+const CACHE_NAME = 'baby-white-noise-v34';
 const APP_SHELL = [
   './',
   './index.html',
@@ -16,8 +16,20 @@ const APP_SHELL = [
   './images/night.png',
   './images/clock.png',
   './images/water.png',
-  './images/shush.png'
+  './images/shush.png',
+  './images/baby-avatar-anime.png',
+  './images/music/moonstone.png',
+  './images/music/kalimba-relaxation-music.png',
+  './images/music/morning.png',
+  './images/music/evening.png',
+  './images/music/fresh-air.png',
+  './images/music/dreamer.png',
+  './images/music/immersed.png',
+  './images/music/river-flute.png'
 ];
+
+const isCacheableResponse = (response) =>
+  response && response.ok && (response.type === 'basic' || response.type === 'default');
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -53,8 +65,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          const cloned = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', cloned));
+          if (isCacheableResponse(response)) {
+            const cloned = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', cloned));
+          }
           return response;
         })
         .catch(() => caches.match('./index.html'))
@@ -64,15 +78,17 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      if (cached) {
-        return cached;
-      }
+      const networkFetch = fetch(event.request)
+        .then((response) => {
+          if (isCacheableResponse(response)) {
+            const cloned = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned));
+          }
+          return response;
+        })
+        .catch(() => cached);
 
-      return fetch(event.request).then((response) => {
-        const cloned = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cloned));
-        return response;
-      });
+      return cached || networkFetch;
     })
   );
 });
