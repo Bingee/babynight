@@ -14,7 +14,8 @@ const filesToCopy = [
   'manifest.webmanifest'
 ];
 
-const directoriesToCopy = ['images', 'audio'];
+const directoriesToCopy = ['images'];
+const directoriesToRemove = ['audio'];
 
 await mkdir(outputDir, { recursive: true });
 
@@ -27,6 +28,10 @@ for (const directory of directoriesToCopy) {
   const targetDir = path.join(outputDir, directory);
   await rm(targetDir, { recursive: true, force: true });
   await cp(sourceDir, targetDir, { recursive: true, force: true });
+}
+
+for (const directory of directoriesToRemove) {
+  await rm(path.join(outputDir, directory), { recursive: true, force: true });
 }
 
 console.log(`Synced web assets to ${path.relative(projectRoot, outputDir)}`);

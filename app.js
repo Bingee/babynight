@@ -7,6 +7,7 @@ class WhiteNoiseApp {
     constructor() {
         this.storageKey = 'baby-white-noise-settings';
         this.activeView = 'noise';
+        this.audioAssetBaseUrl = this.getAudioAssetBaseUrl();
 
         // Audio context
         this.audioContext = null;
@@ -133,6 +134,25 @@ class WhiteNoiseApp {
     detectIOSDevice() {
         const ua = navigator.userAgent || '';
         return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
+    getAudioAssetBaseUrl() {
+        if (window.location.hostname === 'bingee.github.io') {
+            return 'https://cdn.jsdelivr.net/gh/Bingee/babynight@96a2f03e7095629ead365938f4f38e4c795fafb5';
+        }
+
+        return '';
+    }
+
+    resolveAudioUrl(assetPath) {
+        if (!assetPath) return assetPath;
+
+        const normalizedPath = assetPath.replace(/^\.\//, '');
+        if (!this.audioAssetBaseUrl) {
+            return `./${normalizedPath}`;
+        }
+
+        return `${this.audioAssetBaseUrl}/${normalizedPath}`;
     }
 
     setupEventListeners() {
@@ -953,7 +973,7 @@ class WhiteNoiseApp {
         if (!track) return;
 
         const audio = this.getMusicAudio();
-        const trackUrl = new URL(track.url, window.location.href).href;
+        const trackUrl = new URL(this.resolveAudioUrl(track.url), window.location.href).href;
         const isSameTrack = this.currentMusicIndex === index && audio.currentSrc === trackUrl;
 
         if (isSameTrack && !audio.paused) {
@@ -1052,7 +1072,8 @@ class WhiteNoiseApp {
         const originalSrc = audio.currentSrc || audio.src;
         const originalVolume = audio.volume;
         const originalMuted = audio.muted;
-        const unlockSourceUrl = new URL(this.musicTracks[2]?.url || this.musicTracks[0]?.url || trackUrl, window.location.href).href;
+        const unlockTrackPath = this.musicTracks[2]?.url || this.musicTracks[0]?.url || trackUrl;
+        const unlockSourceUrl = new URL(this.resolveAudioUrl(unlockTrackPath), window.location.href).href;
 
         audio.src = unlockSourceUrl;
         audio.load();
@@ -1795,11 +1816,11 @@ class WhiteNoiseApp {
     }
 
     createWaterSound() {
-        return this.createMediaLoopPlayback('./audio/river.mp3', 0.9);
+        return this.createMediaLoopPlayback(this.resolveAudioUrl('./audio/river.mp3'), 0.9);
     }
 
     createShushSound() {
-        return this.createMediaLoopPlayback('./audio/xu.mp3', 0.9);
+        return this.createMediaLoopPlayback(this.resolveAudioUrl('./audio/xu.mp3'), 0.9);
     }
 
     // ===== Timer Functions =====

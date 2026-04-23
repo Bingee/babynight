@@ -1,4 +1,4 @@
-const CACHE_NAME = 'baby-white-noise-v34';
+const CACHE_NAME = 'baby-white-noise-v35';
 const APP_SHELL = [
   './',
   './index.html',

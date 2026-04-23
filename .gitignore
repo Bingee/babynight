@@ -4,3 +4,5 @@ android/.gradle/
 android/build/
 android/app/build/
 *.log
+audio/
+www/audio/
