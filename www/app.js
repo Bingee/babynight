@@ -23,10 +23,12 @@ class WhiteNoiseApp {
         // Sound nodes
         this.soundNodes = {};
         this.musicAudio = null;
-        this.audioBufferCache = new Map();
         this.currentMusicIndex = -1;
+        this.loadingMusicIndex = -1;
         this.isIOSDevice = this.detectIOSDevice();
         this.iosPlaybackUnlocked = false;
+        this.themeMediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)') || null;
+        this.themeMode = 'system';
         this.musicTracks = [
             {
                 title: 'Moonstone',
@@ -98,6 +100,7 @@ class WhiteNoiseApp {
         this.themeSwitch = document.getElementById('theme-switch');
         this.musicTrackList = document.getElementById('music-track-list');
         this.musicCount = document.getElementById('music-count');
+        this.modeSwitch = document.querySelector('.mode-switch');
         this.authorLink = document.getElementById('author-link');
         this.blessingOverlay = document.getElementById('blessing-overlay');
         this.blessingCloseButton = document.getElementById('blessing-close');
@@ -117,6 +120,7 @@ class WhiteNoiseApp {
         this.selectSound('rain');
         this.setTimer(0);
         this.setupEventListeners();
+        this.setupSystemThemeListener();
         this.setupSwipeGestures();
         this.setupBottomSheet();
         this.initMusicTracks();
@@ -208,7 +212,7 @@ class WhiteNoiseApp {
         });
 
         this.themeSwitch?.addEventListener('click', () => {
-            this.setTheme(this.currentTheme === 'dark' ? 'light' : 'dark');
+            this.setTheme(this.currentTheme === 'dark' ? 'light' : 'dark', { manual: true });
         });
 
         document.addEventListener('keydown', (event) => {
@@ -227,11 +231,47 @@ class WhiteNoiseApp {
         let startX = 0;
         let startY = 0;
         let trackingPointerId = null;
+        let horizontalGesture = false;
+
+        const resetTabDrag = () => {
+            horizontalGesture = false;
+            this.modeSwitch?.classList.remove('dragging');
+            this.modeSwitch?.style.setProperty('--tab-drag-offset', '0px');
+        };
+
+        const updateTabDrag = (deltaX) => {
+            if (!this.modeSwitch) return;
+
+            const tabWidth = Math.max(1, (this.modeSwitch.clientWidth - 8) / 2);
+            const minOffset = this.activeView === 'noise' ? -tabWidth : 0;
+            const maxOffset = this.activeView === 'music' ? tabWidth : 0;
+            const offset = Math.max(minOffset, Math.min(maxOffset, deltaX));
+            this.modeSwitch.style.setProperty('--tab-drag-offset', `${offset}px`);
+        };
 
         const handleGestureStart = (clientX, clientY, pointerId = null) => {
             startX = clientX;
             startY = clientY;
             trackingPointerId = pointerId;
+            resetTabDrag();
+        };
+
+        const handleGestureMove = (clientX, clientY, event = null, pointerId = null) => {
+            if (trackingPointerId !== null && pointerId !== null && trackingPointerId !== pointerId) {
+                return;
+            }
+
+            const deltaX = clientX - startX;
+            const deltaY = clientY - startY;
+            if (!horizontalGesture) {
+                horizontalGesture = Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY) * 1.1;
+            }
+
+            if (!horizontalGesture) return;
+
+            this.modeSwitch?.classList.add('dragging');
+            updateTabDrag(deltaX);
+            event?.preventDefault?.();
         };
 
         const handleGestureEnd = (clientX, clientY, pointerId = null) => {
@@ -243,6 +283,7 @@ class WhiteNoiseApp {
             const deltaX = clientX - startX;
             const deltaY = clientY - startY;
             const horizontalSwipe = Math.abs(deltaX) > 56 && Math.abs(deltaX) > Math.abs(deltaY) * 1.25;
+            resetTabDrag();
             if (!horizontalSwipe) return;
 
             if (deltaX < 0 && this.activeView === 'noise') {
@@ -256,14 +297,32 @@ class WhiteNoiseApp {
             panel.addEventListener('pointerdown', (event) => {
                 if (event.button !== undefined && event.button !== 0) return;
                 handleGestureStart(event.clientX, event.clientY, event.pointerId ?? null);
+                if (typeof panel.setPointerCapture === 'function') {
+                    try {
+                        panel.setPointerCapture(event.pointerId);
+                    } catch (error) {
+                        console.warn('Tab swipe pointer capture failed:', error);
+                    }
+                }
+            });
+
+            panel.addEventListener('pointermove', (event) => {
+                handleGestureMove(event.clientX, event.clientY, event, event.pointerId ?? null);
             });
 
             panel.addEventListener('pointerup', (event) => {
                 handleGestureEnd(event.clientX, event.clientY, event.pointerId ?? null);
+                if (typeof panel.releasePointerCapture === 'function' && panel.hasPointerCapture?.(event.pointerId)) {
+                    panel.releasePointerCapture(event.pointerId);
+                }
             });
 
-            panel.addEventListener('pointercancel', () => {
+            panel.addEventListener('pointercancel', (event) => {
                 trackingPointerId = null;
+                resetTabDrag();
+                if (typeof panel.releasePointerCapture === 'function' && panel.hasPointerCapture?.(event.pointerId)) {
+                    panel.releasePointerCapture(event.pointerId);
+                }
             });
 
             if (!window.PointerEvent) {
@@ -272,6 +331,12 @@ class WhiteNoiseApp {
                     if (!touch) return;
                     handleGestureStart(touch.clientX, touch.clientY);
                 }, { passive: true });
+
+                panel.addEventListener('touchmove', (event) => {
+                    const touch = event.changedTouches?.[0];
+                    if (!touch) return;
+                    handleGestureMove(touch.clientX, touch.clientY, event);
+                }, { passive: false });
 
                 panel.addEventListener('touchend', (event) => {
                     const touch = event.changedTouches?.[0];
@@ -292,11 +357,15 @@ class WhiteNoiseApp {
         let pointerMoved = false;
 
         const onPointerMove = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
             pointerDeltaY = event.clientY - pointerStartY;
             pointerMoved = Math.abs(pointerDeltaY) > 16;
         };
 
         const onPointerEnd = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
             this.bottomSheetHandle.removeEventListener('pointermove', onPointerMove);
             this.bottomSheetHandle.removeEventListener('pointerup', onPointerEnd);
             this.bottomSheetHandle.removeEventListener('pointercancel', onPointerEnd);
@@ -318,6 +387,8 @@ class WhiteNoiseApp {
                 return;
             }
 
+            event.preventDefault();
+            event.stopPropagation();
             pointerStartY = event.clientY;
             pointerDeltaY = 0;
             pointerMoved = false;
@@ -352,6 +423,21 @@ class WhiteNoiseApp {
 
             this.setBottomSheetExpanded(true);
         });
+    }
+
+    setupSystemThemeListener() {
+        if (!this.themeMediaQuery) return;
+
+        const handleSystemThemeChange = () => {
+            if (this.themeMode !== 'system') return;
+            this.applyTheme('system', { persist: true });
+        };
+
+        if (typeof this.themeMediaQuery.addEventListener === 'function') {
+            this.themeMediaQuery.addEventListener('change', handleSystemThemeChange);
+        } else if (typeof this.themeMediaQuery.addListener === 'function') {
+            this.themeMediaQuery.addListener(handleSystemThemeChange);
+        }
     }
 
     setBottomSheetExpanded(expanded) {
@@ -423,6 +509,8 @@ class WhiteNoiseApp {
         this.noisePanel.classList.toggle('active', !showMusic);
         this.musicPanel.hidden = !showMusic;
         this.musicPanel.classList.toggle('active', showMusic);
+        this.modeSwitch?.style.setProperty('--tab-active-index', showMusic ? '1' : '0');
+        this.modeSwitch?.style.setProperty('--tab-drag-offset', '0px');
         this.persistState();
     }
 
@@ -443,7 +531,8 @@ class WhiteNoiseApp {
         const raw = window.localStorage.getItem(this.storageKey);
         if (!raw) {
             this.applyVolume(this.volumeSlider.value);
-            this.applyTheme(this.currentTheme);
+            this.themeMode = 'system';
+            this.applyTheme('system');
             return;
         }
 
@@ -472,15 +561,21 @@ class WhiteNoiseApp {
                 this.setActiveView(settings.activeView);
             }
 
-            if (settings.theme) {
+            if (settings.themeMode === 'system' || !settings.themeMode) {
+                this.themeMode = 'system';
+                this.applyTheme('system');
+            } else if (settings.themeMode === 'manual' && settings.theme) {
+                this.themeMode = 'manual';
                 this.applyTheme(settings.theme);
             } else {
-                this.applyTheme(this.currentTheme);
+                this.themeMode = 'system';
+                this.applyTheme('system');
             }
         } catch (error) {
             console.warn('Failed to restore settings:', error);
             this.applyVolume(this.volumeSlider.value);
-            this.applyTheme(this.currentTheme);
+            this.themeMode = 'system';
+            this.applyTheme('system');
         }
     }
 
@@ -494,7 +589,8 @@ class WhiteNoiseApp {
             timerMinutes: this.timerMinutes,
             volume: Number(this.volumeSlider.value),
             activeView: this.activeView,
-            theme: this.currentTheme
+            theme: this.currentTheme,
+            themeMode: this.themeMode
         };
 
         window.localStorage.setItem(this.storageKey, JSON.stringify(settings));
@@ -516,15 +612,24 @@ class WhiteNoiseApp {
         this.soundNodes.current?.setVolume?.(normalizedVolume / 100);
     }
 
-    setTheme(theme) {
+    getSystemTheme() {
+        return this.themeMediaQuery?.matches ? 'dark' : 'light';
+    }
+
+    setTheme(theme, options = {}) {
+        if (options.manual) {
+            this.themeMode = 'manual';
+        }
+
         this.applyTheme(theme);
         this.persistState();
     }
 
-    applyTheme(theme) {
-        const resolvedTheme = theme === 'dark' ? 'dark' : 'light';
+    applyTheme(theme, options = {}) {
+        const resolvedTheme = theme === 'system' ? this.getSystemTheme() : (theme === 'dark' ? 'dark' : 'light');
         this.currentTheme = resolvedTheme;
         document.documentElement.dataset.theme = resolvedTheme;
+        document.documentElement.dataset.themeMode = this.themeMode;
 
         if (this.themeSwitch) {
             const dark = resolvedTheme === 'dark';
@@ -534,6 +639,10 @@ class WhiteNoiseApp {
 
         const themeColor = resolvedTheme === 'dark' ? '#101623' : '#fff5ef';
         document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColor);
+
+        if (options.persist) {
+            this.persistState();
+        }
     }
 
     handleSoundSelection(soundName) {
@@ -718,187 +827,34 @@ class WhiteNoiseApp {
         }
     }
 
-    async loadDecodedAudioBuffer(url) {
-        const absoluteUrl = new URL(url, window.location.href).href;
-        let bufferPromise = this.audioBufferCache.get(absoluteUrl);
-
-        if (!bufferPromise) {
-            bufferPromise = fetch(absoluteUrl)
-                .then((response) => {
-                    if (!response.ok) {
-                        throw new Error(`Failed to fetch audio: ${response.status}`);
-                    }
-                    return response.arrayBuffer();
-                })
-                .then((arrayBuffer) => this.audioContext.decodeAudioData(arrayBuffer));
-
-            this.audioBufferCache.set(absoluteUrl, bufferPromise);
-        }
-
-        try {
-            return await bufferPromise;
-        } catch (error) {
-            this.audioBufferCache.delete(absoluteUrl);
-            throw error;
-        }
-    }
-
     createMediaLoopPlayback(url, volumeMultiplier = 1) {
-        const now = this.audioContext.currentTime;
-        const dryGain = this.audioContext.createGain();
-        const highPass = this.audioContext.createBiquadFilter();
-        const lowPass = this.audioContext.createBiquadFilter();
-        const outputGain = this.audioContext.createGain();
-
-        highPass.type = 'highpass';
-        highPass.frequency.setValueAtTime(120, now);
-        highPass.Q.setValueAtTime(0.7, now);
-
-        lowPass.type = 'lowpass';
-        lowPass.frequency.setValueAtTime(4200, now);
-        lowPass.Q.setValueAtTime(0.45, now);
-
-        dryGain.gain.setValueAtTime(Math.min(1, (Number(this.volumeSlider.value) / 100) * volumeMultiplier), now);
-        outputGain.gain.setValueAtTime(0, now);
-        outputGain.gain.linearRampToValueAtTime(1, now + 0.5);
-
-        dryGain.connect(highPass);
-        highPass.connect(lowPass);
-        lowPass.connect(outputGain);
-        outputGain.connect(this.masterGainNode);
-
-        const activeSources = new Set();
-        let schedulerInterval = null;
-        let nextStartTime = 0;
-        let fallbackAudio = null;
         let stopped = false;
+        const audio = new Audio(url);
+        audio.loop = true;
+        audio.preload = 'auto';
+        audio.playsInline = true;
+        audio.setAttribute('playsinline', 'true');
+        audio.setAttribute('webkit-playsinline', 'true');
+        audio.volume = Math.min(1, (Number(this.volumeSlider.value) / 100) * volumeMultiplier);
 
-        const disconnectGraph = () => {
-            dryGain.disconnect();
-            highPass.disconnect();
-            lowPass.disconnect();
-            outputGain.disconnect();
-        };
-
-        const cleanupEntry = (entry) => {
-            if (!entry) return;
-            activeSources.delete(entry);
-            entry.source.disconnect();
-            entry.gain.disconnect();
-        };
-
-        const startFallbackElement = () => {
-            if (stopped) return;
-
-            fallbackAudio = new Audio(url);
-            fallbackAudio.loop = true;
-            fallbackAudio.preload = 'auto';
-            fallbackAudio.playsInline = true;
-            fallbackAudio.setAttribute('playsinline', 'true');
-            fallbackAudio.setAttribute('webkit-playsinline', 'true');
-            fallbackAudio.volume = Math.min(1, (Number(this.volumeSlider.value) / 100) * volumeMultiplier);
-
-            const playPromise = fallbackAudio.play();
-            if (playPromise?.catch) {
-                playPromise.catch((error) => {
-                    console.error('Looping audio play failed:', error);
-                });
-            }
-        };
-
-        this.loadDecodedAudioBuffer(url)
-            .then((buffer) => {
+        const playPromise = audio.play();
+        if (playPromise?.catch) {
+            playPromise.catch((error) => {
                 if (stopped) return;
-
-                const crossfadeDuration = Math.max(0.35, Math.min(1.8, buffer.duration * 0.18));
-                const loopInterval = Math.max(0.8, buffer.duration - crossfadeDuration);
-                const scheduleAheadTime = Math.max(4, loopInterval * 2);
-
-                const scheduleSource = (startTime, isFirstLayer) => {
-                    const layer = this.audioContext.createBufferSource();
-                    const layerGain = this.audioContext.createGain();
-                    const fadeInDuration = Math.min(isFirstLayer ? 0.45 : crossfadeDuration, buffer.duration * 0.4);
-                    const fadeOutStart = startTime + Math.max(fadeInDuration, buffer.duration - crossfadeDuration);
-                    const stopTime = startTime + buffer.duration;
-                    const entry = { source: layer, gain: layerGain };
-
-                    layer.buffer = buffer;
-                    layer.connect(layerGain);
-                    layerGain.connect(dryGain);
-
-                    layerGain.gain.setValueAtTime(0.0001, startTime);
-                    layerGain.gain.linearRampToValueAtTime(1, startTime + fadeInDuration);
-                    layerGain.gain.setValueAtTime(1, fadeOutStart);
-                    layerGain.gain.linearRampToValueAtTime(0.0001, stopTime);
-
-                    layer.start(startTime);
-                    layer.stop(stopTime + 0.02);
-                    layer.onended = () => cleanupEntry(entry);
-                    activeSources.add(entry);
-                };
-
-                const fillSchedule = () => {
-                    if (stopped) return;
-
-                    const horizon = this.audioContext.currentTime + scheduleAheadTime;
-                    while (nextStartTime < horizon) {
-                        scheduleSource(nextStartTime, activeSources.size === 0);
-                        nextStartTime += loopInterval;
-                    }
-                };
-
-                nextStartTime = this.audioContext.currentTime + 0.02;
-                fillSchedule();
-                schedulerInterval = window.setInterval(fillSchedule, 500);
-            })
-            .catch((error) => {
-                console.warn('Gapless buffer loop unavailable, falling back to media element:', error);
-                disconnectGraph();
-                startFallbackElement();
+                console.error('Looping audio play failed:', error);
             });
+        }
 
         return {
             stop: () => {
                 if (stopped) return;
                 stopped = true;
-
-                if (schedulerInterval) {
-                    window.clearInterval(schedulerInterval);
-                }
-
-                if (fallbackAudio) {
-                    fallbackAudio.pause();
-                    fallbackAudio.currentTime = 0;
-                    fallbackAudio = null;
-                }
-
-                const stopNow = this.audioContext.currentTime;
-                const stopAt = stopNow + 0.4;
-                outputGain.gain.cancelScheduledValues(stopNow);
-                outputGain.gain.setTargetAtTime(0, stopNow, 0.08);
-
-                activeSources.forEach((entry) => {
-                    try {
-                        entry.source.stop(stopAt);
-                    } catch (error) {
-                        console.warn('Buffer loop stop failed:', error);
-                    }
-                });
-
-                window.setTimeout(() => {
-                    activeSources.forEach((entry) => cleanupEntry(entry));
-                    disconnectGraph();
-                }, 520);
+                audio.pause();
+                audio.removeAttribute('src');
+                audio.load();
             },
             setVolume: (volume) => {
-                const targetVolume = Math.min(1, volume * volumeMultiplier);
-
-                if (fallbackAudio) {
-                    fallbackAudio.volume = targetVolume;
-                    return;
-                }
-
-                dryGain.gain.setTargetAtTime(targetVolume, this.audioContext.currentTime, 0.08);
+                audio.volume = Math.min(1, volume * volumeMultiplier);
             }
         };
     }
@@ -939,11 +895,28 @@ class WhiteNoiseApp {
         if (!this.musicAudio) {
             this.musicAudio = new Audio();
             this.musicAudio.loop = true;
-            this.musicAudio.preload = 'metadata';
+            this.musicAudio.preload = 'auto';
             this.musicAudio.playsInline = true;
             this.musicAudio.setAttribute('playsinline', 'true');
             this.musicAudio.setAttribute('webkit-playsinline', 'true');
+            this.musicAudio.addEventListener('loadstart', () => {
+                if (this.currentMusicIndex >= 0) {
+                    this.loadingMusicIndex = this.currentMusicIndex;
+                    this.updateMusicTrackButtons();
+                }
+            });
+            this.musicAudio.addEventListener('waiting', () => {
+                if (this.currentMusicIndex >= 0 && !this.musicAudio.paused) {
+                    this.loadingMusicIndex = this.currentMusicIndex;
+                    this.updateMusicTrackButtons();
+                }
+            });
+            this.musicAudio.addEventListener('playing', () => {
+                this.loadingMusicIndex = -1;
+                this.updateMusicTrackButtons();
+            });
             this.musicAudio.addEventListener('pause', () => {
+                this.loadingMusicIndex = -1;
                 this.updateMusicTrackButtons();
                 if (!this.isPlaying) {
                     this.stopTimer();
@@ -951,6 +924,7 @@ class WhiteNoiseApp {
             });
             this.musicAudio.addEventListener('ended', () => {
                 this.currentMusicIndex = -1;
+                this.loadingMusicIndex = -1;
                 this.updateMusicTrackButtons();
                 if (!this.isPlaying) {
                     this.stopTimer();
@@ -958,11 +932,12 @@ class WhiteNoiseApp {
             });
             this.musicAudio.addEventListener('error', () => {
                 this.currentMusicIndex = -1;
+                this.loadingMusicIndex = -1;
                 this.updateMusicTrackButtons();
                 if (!this.isPlaying) {
                     this.stopTimer();
                 }
-                alert('当前音乐加载失败，请稍后重试。');
+                console.error('Music audio failed to load.');
             });
         }
         return this.musicAudio;
@@ -974,7 +949,7 @@ class WhiteNoiseApp {
 
         const audio = this.getMusicAudio();
         const trackUrl = new URL(this.resolveAudioUrl(track.url), window.location.href).href;
-        const isSameTrack = this.currentMusicIndex === index && audio.currentSrc === trackUrl;
+        const isSameTrack = this.currentMusicIndex === index && (audio.currentSrc === trackUrl || audio.src === trackUrl);
 
         if (isSameTrack && !audio.paused) {
             audio.pause();
@@ -987,20 +962,25 @@ class WhiteNoiseApp {
 
         this.setActiveView('music');
         this.currentMusicIndex = index;
+        this.loadingMusicIndex = index;
         if (!isSameTrack) {
             audio.src = trackUrl;
             audio.load();
         }
         audio.volume = this.volumeSlider.value / 100;
         audio.muted = false;
+        this.updateMusicTrackButtons();
 
         try {
-            await this.preparePlayback(trackUrl);
+            this.setPlaybackSession();
             await audio.play();
+            this.iosPlaybackUnlocked = true;
+            this.loadingMusicIndex = -1;
             this.startTimer();
         } catch (error) {
+            this.loadingMusicIndex = -1;
+            this.currentMusicIndex = -1;
             console.error('Music play failed:', error);
-            alert('播放失败，请先和页面进行一次交互后再试。');
         }
 
         this.updateMusicTrackButtons();
@@ -1010,6 +990,7 @@ class WhiteNoiseApp {
         if (!this.musicAudio) return;
         this.musicAudio.pause();
         this.currentMusicIndex = -1;
+        this.loadingMusicIndex = -1;
         this.updateMusicTrackButtons();
         if (!this.isPlaying) {
             this.stopTimer();
@@ -1022,9 +1003,13 @@ class WhiteNoiseApp {
         buttons.forEach((button) => {
             const index = parseInt(button.dataset.index, 10);
             const active = this.musicAudio && !this.musicAudio.paused && this.currentMusicIndex === index;
+            const loading = this.loadingMusicIndex === index && this.currentMusicIndex === index && !active;
             button.classList.toggle('playing', active);
-            button.textContent = active ? '停止' : '播放';
-            button.setAttribute('aria-label', active ? '停止睡眠音乐播放' : '播放睡眠音乐');
+            button.classList.toggle('loading', loading);
+            button.disabled = false;
+            button.setAttribute('aria-busy', String(loading));
+            button.textContent = active ? '停止' : (loading ? '加载中' : '播放');
+            button.setAttribute('aria-label', active ? '停止睡眠音乐播放' : (loading ? '睡眠音乐加载中' : '播放睡眠音乐'));
         });
     }
 
