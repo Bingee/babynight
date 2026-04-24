@@ -162,6 +162,7 @@ class WhiteNoiseApp {
     setupEventListeners() {
         this.viewTabs.forEach((tab) => {
             tab.addEventListener('click', () => {
+                this.resetModeSwitchDragState();
                 this.setActiveView(tab.dataset.view);
             });
         });
@@ -226,8 +227,15 @@ class WhiteNoiseApp {
         });
     }
 
+    resetModeSwitchDragState() {
+        if (!this.modeSwitch) return;
+
+        this.modeSwitch.classList.remove('dragging');
+        this.modeSwitch.style.setProperty('--tab-drag-offset', '0px');
+    }
+
     setupSwipeGestures() {
-        const panels = [this.topBar, this.noisePanel, this.musicPanel].filter(Boolean);
+        const panels = [this.noisePanel, this.musicPanel].filter(Boolean);
         let startX = 0;
         let startY = 0;
         let trackingPointerId = null;
@@ -235,17 +243,17 @@ class WhiteNoiseApp {
 
         const resetTabDrag = () => {
             horizontalGesture = false;
-            this.modeSwitch?.classList.remove('dragging');
-            this.modeSwitch?.style.setProperty('--tab-drag-offset', '0px');
+            this.resetModeSwitchDragState();
         };
 
         const updateTabDrag = (deltaX) => {
             if (!this.modeSwitch) return;
 
-            const tabWidth = Math.max(1, (this.modeSwitch.clientWidth - 8) / 2);
-            const minOffset = this.activeView === 'noise' ? -tabWidth : 0;
-            const maxOffset = this.activeView === 'music' ? tabWidth : 0;
-            const offset = Math.max(minOffset, Math.min(maxOffset, deltaX));
+            const tabTravel = Math.max(1, (this.modeSwitch.clientWidth - 4) / 2);
+            const desiredOffset = -deltaX;
+            const minOffset = this.activeView === 'music' ? -tabTravel : 0;
+            const maxOffset = this.activeView === 'noise' ? tabTravel : 0;
+            const offset = Math.max(minOffset, Math.min(maxOffset, desiredOffset));
             this.modeSwitch.style.setProperty('--tab-drag-offset', `${offset}px`);
         };
 
@@ -297,13 +305,6 @@ class WhiteNoiseApp {
             panel.addEventListener('pointerdown', (event) => {
                 if (event.button !== undefined && event.button !== 0) return;
                 handleGestureStart(event.clientX, event.clientY, event.pointerId ?? null);
-                if (typeof panel.setPointerCapture === 'function') {
-                    try {
-                        panel.setPointerCapture(event.pointerId);
-                    } catch (error) {
-                        console.warn('Tab swipe pointer capture failed:', error);
-                    }
-                }
             });
 
             panel.addEventListener('pointermove', (event) => {
@@ -312,17 +313,11 @@ class WhiteNoiseApp {
 
             panel.addEventListener('pointerup', (event) => {
                 handleGestureEnd(event.clientX, event.clientY, event.pointerId ?? null);
-                if (typeof panel.releasePointerCapture === 'function' && panel.hasPointerCapture?.(event.pointerId)) {
-                    panel.releasePointerCapture(event.pointerId);
-                }
             });
 
             panel.addEventListener('pointercancel', (event) => {
                 trackingPointerId = null;
                 resetTabDrag();
-                if (typeof panel.releasePointerCapture === 'function' && panel.hasPointerCapture?.(event.pointerId)) {
-                    panel.releasePointerCapture(event.pointerId);
-                }
             });
 
             if (!window.PointerEvent) {
@@ -510,7 +505,7 @@ class WhiteNoiseApp {
         this.musicPanel.hidden = !showMusic;
         this.musicPanel.classList.toggle('active', showMusic);
         this.modeSwitch?.style.setProperty('--tab-active-index', showMusic ? '1' : '0');
-        this.modeSwitch?.style.setProperty('--tab-drag-offset', '0px');
+        this.resetModeSwitchDragState();
         this.persistState();
     }
 
