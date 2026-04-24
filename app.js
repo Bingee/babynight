@@ -967,6 +967,7 @@ class WhiteNoiseApp {
         this.updateMusicTrackButtons();
 
         try {
+            await this.preparePlayback(trackUrl);
             this.setPlaybackSession();
             await audio.play();
             this.iosPlaybackUnlocked = true;
