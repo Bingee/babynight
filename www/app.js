@@ -22,11 +22,13 @@ class WhiteNoiseApp {
 
         // Sound nodes
         this.soundNodes = {};
+        this.audioBufferCache = {};
         this.musicAudio = null;
         this.currentMusicIndex = -1;
         this.loadingMusicIndex = -1;
         this.isIOSDevice = this.detectIOSDevice();
         this.iosPlaybackUnlocked = false;
+        this.musicUnlockPromise = null;
         this.themeMediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)') || null;
         this.themeMode = 'system';
         this.musicTracks = [
@@ -141,8 +143,13 @@ class WhiteNoiseApp {
     }
 
     getAudioAssetBaseUrl() {
-        if (window.location.hostname === 'bingee.github.io') {
-            return 'https://cdn.jsdelivr.net/gh/Bingee/babynight@96a2f03e7095629ead365938f4f38e4c795fafb5';
+        const cdnBaseUrl = 'https://cdn.jsdelivr.net/gh/Bingee/babynight@96a2f03e7095629ead365938f4f38e4c795fafb5';
+        const { hostname, pathname, port, protocol } = window.location;
+        const bundledLocalhost = hostname === 'localhost' && !port && protocol !== 'file:';
+        const bundledFilePreview = protocol === 'file:' && pathname.includes('/www/');
+
+        if (hostname === 'bingee.github.io' || bundledLocalhost || protocol === 'capacitor:' || protocol === 'ionic:' || bundledFilePreview) {
+            return cdnBaseUrl;
         }
 
         return '';
@@ -150,6 +157,9 @@ class WhiteNoiseApp {
 
     resolveAudioUrl(assetPath) {
         if (!assetPath) return assetPath;
+        if (/^[a-z][a-z\d+.-]*:/i.test(assetPath) || assetPath.startsWith('//')) {
+            return assetPath;
+        }
 
         const normalizedPath = assetPath.replace(/^\.\//, '');
         if (!this.audioAssetBaseUrl) {
@@ -159,9 +169,24 @@ class WhiteNoiseApp {
         return `${this.audioAssetBaseUrl}/${normalizedPath}`;
     }
 
+    getCachedMonoBuffer(cacheKey, durationSeconds, fillOutput) {
+        const sampleRate = this.audioContext.sampleRate;
+        const key = `${cacheKey}:${sampleRate}`;
+        if (this.audioBufferCache[key]) {
+            return this.audioBufferCache[key];
+        }
+
+        const bufferSize = Math.floor(durationSeconds * sampleRate);
+        const buffer = this.audioContext.createBuffer(1, bufferSize, sampleRate);
+        fillOutput(buffer.getChannelData(0), sampleRate);
+        this.audioBufferCache[key] = buffer;
+        return buffer;
+    }
+
     setupEventListeners() {
         this.viewTabs.forEach((tab) => {
             tab.addEventListener('click', () => {
+                this.resetModeSwitchDragState();
                 this.setActiveView(tab.dataset.view);
             });
         });
@@ -226,8 +251,15 @@ class WhiteNoiseApp {
         });
     }
 
+    resetModeSwitchDragState() {
+        if (!this.modeSwitch) return;
+
+        this.modeSwitch.classList.remove('dragging');
+        this.modeSwitch.style.setProperty('--tab-drag-offset', '0px');
+    }
+
     setupSwipeGestures() {
-        const panels = [this.topBar, this.noisePanel, this.musicPanel].filter(Boolean);
+        const panels = [this.noisePanel, this.musicPanel].filter(Boolean);
         let startX = 0;
         let startY = 0;
         let trackingPointerId = null;
@@ -235,17 +267,17 @@ class WhiteNoiseApp {
 
         const resetTabDrag = () => {
             horizontalGesture = false;
-            this.modeSwitch?.classList.remove('dragging');
-            this.modeSwitch?.style.setProperty('--tab-drag-offset', '0px');
+            this.resetModeSwitchDragState();
         };
 
         const updateTabDrag = (deltaX) => {
             if (!this.modeSwitch) return;
 
-            const tabWidth = Math.max(1, (this.modeSwitch.clientWidth - 8) / 2);
-            const minOffset = this.activeView === 'noise' ? -tabWidth : 0;
-            const maxOffset = this.activeView === 'music' ? tabWidth : 0;
-            const offset = Math.max(minOffset, Math.min(maxOffset, deltaX));
+            const tabTravel = Math.max(1, (this.modeSwitch.clientWidth - 4) / 2);
+            const desiredOffset = -deltaX;
+            const minOffset = this.activeView === 'music' ? -tabTravel : 0;
+            const maxOffset = this.activeView === 'noise' ? tabTravel : 0;
+            const offset = Math.max(minOffset, Math.min(maxOffset, desiredOffset));
             this.modeSwitch.style.setProperty('--tab-drag-offset', `${offset}px`);
         };
 
@@ -297,13 +329,6 @@ class WhiteNoiseApp {
             panel.addEventListener('pointerdown', (event) => {
                 if (event.button !== undefined && event.button !== 0) return;
                 handleGestureStart(event.clientX, event.clientY, event.pointerId ?? null);
-                if (typeof panel.setPointerCapture === 'function') {
-                    try {
-                        panel.setPointerCapture(event.pointerId);
-                    } catch (error) {
-                        console.warn('Tab swipe pointer capture failed:', error);
-                    }
-                }
             });
 
             panel.addEventListener('pointermove', (event) => {
@@ -312,17 +337,11 @@ class WhiteNoiseApp {
 
             panel.addEventListener('pointerup', (event) => {
                 handleGestureEnd(event.clientX, event.clientY, event.pointerId ?? null);
-                if (typeof panel.releasePointerCapture === 'function' && panel.hasPointerCapture?.(event.pointerId)) {
-                    panel.releasePointerCapture(event.pointerId);
-                }
             });
 
             panel.addEventListener('pointercancel', (event) => {
                 trackingPointerId = null;
                 resetTabDrag();
-                if (typeof panel.releasePointerCapture === 'function' && panel.hasPointerCapture?.(event.pointerId)) {
-                    panel.releasePointerCapture(event.pointerId);
-                }
             });
 
             if (!window.PointerEvent) {
@@ -510,7 +529,7 @@ class WhiteNoiseApp {
         this.musicPanel.hidden = !showMusic;
         this.musicPanel.classList.toggle('active', showMusic);
         this.modeSwitch?.style.setProperty('--tab-active-index', showMusic ? '1' : '0');
-        this.modeSwitch?.style.setProperty('--tab-drag-offset', '0px');
+        this.resetModeSwitchDragState();
         this.persistState();
     }
 
@@ -970,9 +989,13 @@ class WhiteNoiseApp {
         audio.volume = this.volumeSlider.value / 100;
         audio.muted = false;
         this.updateMusicTrackButtons();
+        const musicUnlockPromise = this.unlockMusicElement(trackUrl);
 
         try {
             this.setPlaybackSession();
+            await musicUnlockPromise;
+            audio.volume = this.volumeSlider.value / 100;
+            audio.muted = false;
             await audio.play();
             this.iosPlaybackUnlocked = true;
             this.loadingMusicIndex = -1;
@@ -1024,8 +1047,10 @@ class WhiteNoiseApp {
             }
         };
 
-        document.addEventListener('touchstart', unlock, { once: true, passive: true });
-        document.addEventListener('click', unlock, { once: true, passive: true });
+        const options = { once: true, passive: true, capture: true };
+        document.addEventListener('pointerdown', unlock, options);
+        document.addEventListener('touchstart', unlock, options);
+        document.addEventListener('click', unlock, options);
     }
 
     setPlaybackSession() {
@@ -1049,15 +1074,22 @@ class WhiteNoiseApp {
     }
 
     async unlockMusicElement(trackUrl) {
-        if (!this.isIOSDevice || this.iosPlaybackUnlocked || !trackUrl) {
+        if (!this.isIOSDevice || this.iosPlaybackUnlocked) {
             return;
+        }
+
+        if (this.musicUnlockPromise) {
+            return this.musicUnlockPromise;
         }
 
         const audio = this.getMusicAudio();
         const originalSrc = audio.currentSrc || audio.src;
         const originalVolume = audio.volume;
         const originalMuted = audio.muted;
-        const unlockTrackPath = this.musicTracks[2]?.url || this.musicTracks[0]?.url || trackUrl;
+        const unlockTrackPath = trackUrl || this.musicTracks[2]?.url || this.musicTracks[0]?.url;
+        if (!unlockTrackPath) {
+            return;
+        }
         const unlockSourceUrl = new URL(this.resolveAudioUrl(unlockTrackPath), window.location.href).href;
 
         audio.src = unlockSourceUrl;
@@ -1065,18 +1097,24 @@ class WhiteNoiseApp {
         audio.volume = 0;
         audio.muted = true;
 
-        try {
+        this.musicUnlockPromise = (async () => {
             await audio.play();
             audio.pause();
             audio.currentTime = 0;
             this.iosPlaybackUnlocked = true;
+        })();
+
+        try {
+            await this.musicUnlockPromise;
         } finally {
             audio.pause();
             audio.muted = originalMuted;
             audio.volume = originalVolume;
             if (originalSrc && originalSrc !== unlockSourceUrl) {
                 audio.src = originalSrc;
+                audio.load();
             }
+            this.musicUnlockPromise = null;
         }
     }
 
@@ -1089,28 +1127,26 @@ class WhiteNoiseApp {
     // ===== Sound Generators =====
 
     createWhiteNoise() {
-        const bufferSize = 8 * this.audioContext.sampleRate;
-        const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-        const output = buffer.getChannelData(0);
+        const buffer = this.getCachedMonoBuffer('white-noise', 8, (output) => {
+            // Blend white/pink/brown noise for smoother and less piercing tone.
+            let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+            let brown = 0;
+            for (let i = 0; i < output.length; i++) {
+                const white = Math.random() * 2 - 1;
+                b0 = 0.99886 * b0 + white * 0.0555179;
+                b1 = 0.99332 * b1 + white * 0.0750759;
+                b2 = 0.96900 * b2 + white * 0.1538520;
+                b3 = 0.86650 * b3 + white * 0.3104856;
+                b4 = 0.55000 * b4 + white * 0.5329522;
+                b5 = -0.7616 * b5 - white * 0.0168980;
+                const pink = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+                b6 = white * 0.115926;
 
-        // Blend white/pink/brown noise for smoother and less piercing tone.
-        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-        let brown = 0;
-        for (let i = 0; i < bufferSize; i++) {
-            const white = Math.random() * 2 - 1;
-            b0 = 0.99886 * b0 + white * 0.0555179;
-            b1 = 0.99332 * b1 + white * 0.0750759;
-            b2 = 0.96900 * b2 + white * 0.1538520;
-            b3 = 0.86650 * b3 + white * 0.3104856;
-            b4 = 0.55000 * b4 + white * 0.5329522;
-            b5 = -0.7616 * b5 - white * 0.0168980;
-            const pink = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
-            b6 = white * 0.115926;
-
-            brown = (brown + 0.02 * white) / 1.02;
-            const mixed = white * 0.45 + pink * 0.6 + brown * 1.1;
-            output[i] = Math.max(-1, Math.min(1, mixed)) * 0.18;
-        }
+                brown = (brown + 0.02 * white) / 1.02;
+                const mixed = white * 0.45 + pink * 0.6 + brown * 1.1;
+                output[i] = Math.max(-1, Math.min(1, mixed)) * 0.18;
+            }
+        });
 
         const now = this.audioContext.currentTime;
         const whiteNoise = this.audioContext.createBufferSource();
@@ -1179,25 +1215,21 @@ class WhiteNoiseApp {
     }
 
     createRainSound() {
-        // Enhanced pink noise for more realistic rain with density variation
-        const bufferSize = 4 * this.audioContext.sampleRate;
-        const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-        const output = buffer.getChannelData(0);
-
-        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-        for (let i = 0; i < bufferSize; i++) {
-            const white = Math.random() * 2 - 1;
-            // Add density variation for more natural rain
-            const densityMod = Math.sin(i / this.audioContext.sampleRate * 0.3) * 0.3 + 0.7;
-            b0 = 0.99886 * b0 + white * 0.0555179;
-            b1 = 0.99332 * b1 + white * 0.0750759;
-            b2 = 0.96900 * b2 + white * 0.1538520;
-            b3 = 0.86650 * b3 + white * 0.3104856;
-            b4 = 0.55000 * b4 + white * 0.5329522;
-            b5 = -0.7616 * b5 - white * 0.0168980;
-            output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.13 * densityMod;
-            b6 = white * 0.115926;
-        }
+        const buffer = this.getCachedMonoBuffer('rain', 4, (output, sampleRate) => {
+            let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+            for (let i = 0; i < output.length; i++) {
+                const white = Math.random() * 2 - 1;
+                const densityMod = Math.sin(i / sampleRate * 0.3) * 0.3 + 0.7;
+                b0 = 0.99886 * b0 + white * 0.0555179;
+                b1 = 0.99332 * b1 + white * 0.0750759;
+                b2 = 0.96900 * b2 + white * 0.1538520;
+                b3 = 0.86650 * b3 + white * 0.3104856;
+                b4 = 0.55000 * b4 + white * 0.5329522;
+                b5 = -0.7616 * b5 - white * 0.0168980;
+                output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.13 * densityMod;
+                b6 = white * 0.115926;
+            }
+        });
 
         const rainNoise = this.audioContext.createBufferSource();
         rainNoise.buffer = buffer;
@@ -1239,30 +1271,26 @@ class WhiteNoiseApp {
     }
 
     createOceanSound() {
-        // Enhanced ocean waves with longer period and foam detail
-        const bufferSize = 8 * this.audioContext.sampleRate;
-        const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-        const output = buffer.getChannelData(0);
+        const buffer = this.getCachedMonoBuffer('ocean', 8, (output, sampleRate) => {
+            let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+            for (let i = 0; i < output.length; i++) {
+                const white = Math.random() * 2 - 1;
+                b0 = 0.99886 * b0 + white * 0.0555179;
+                b1 = 0.99332 * b1 + white * 0.0750759;
+                b2 = 0.96900 * b2 + white * 0.1538520;
+                b3 = 0.86650 * b3 + white * 0.3104856;
+                b4 = 0.55000 * b4 + white * 0.5329522;
+                b5 = -0.7616 * b5 - white * 0.0168980;
 
-        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-        for (let i = 0; i < bufferSize; i++) {
-            const white = Math.random() * 2 - 1;
-            b0 = 0.99886 * b0 + white * 0.0555179;
-            b1 = 0.99332 * b1 + white * 0.0750759;
-            b2 = 0.96900 * b2 + white * 0.1538520;
-            b3 = 0.86650 * b3 + white * 0.3104856;
-            b4 = 0.55000 * b4 + white * 0.5329522;
-            b5 = -0.7616 * b5 - white * 0.0168980;
+                const time = i / sampleRate;
+                const wave1 = Math.sin(time * 0.08 * Math.PI * 2);
+                const wave2 = Math.sin(time * 0.13 * Math.PI * 2) * 0.5;
+                const waveMod = ((wave1 + wave2) + 2) * 0.25 + 0.2;
 
-            // Longer wave period with multiple harmonics
-            const time = i / this.audioContext.sampleRate;
-            const wave1 = Math.sin(time * 0.08 * Math.PI * 2);
-            const wave2 = Math.sin(time * 0.13 * Math.PI * 2) * 0.5;
-            const waveMod = ((wave1 + wave2) + 2) * 0.25 + 0.2;
-
-            output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.12 * waveMod;
-            b6 = white * 0.115926;
-        }
+                output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.12 * waveMod;
+                b6 = white * 0.115926;
+            }
+        });
 
         const oceanNoise = this.audioContext.createBufferSource();
         oceanNoise.buffer = buffer;
@@ -1302,20 +1330,17 @@ class WhiteNoiseApp {
     }
 
     createWindSound() {
-        const bufferSize = 3 * this.audioContext.sampleRate;
-        const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-        const output = buffer.getChannelData(0);
-
-        // Multi-layered wind with varying intensity
-        let b0 = 0, b1 = 0, b2 = 0;
-        for (let i = 0; i < bufferSize; i++) {
-            const white = Math.random() * 2 - 1;
-            const gustMod = Math.sin(i / this.audioContext.sampleRate * 0.4) * 0.4 + 0.6;
-            b0 = 0.99765 * b0 + white * 0.0990460;
-            b1 = 0.96300 * b1 + white * 0.2965164;
-            b2 = 0.57000 * b2 + white * 1.0526913;
-            output[i] = (b0 + b1 + b2) * 0.09 * gustMod;
-        }
+        const buffer = this.getCachedMonoBuffer('wind', 3, (output, sampleRate) => {
+            let b0 = 0, b1 = 0, b2 = 0;
+            for (let i = 0; i < output.length; i++) {
+                const white = Math.random() * 2 - 1;
+                const gustMod = Math.sin(i / sampleRate * 0.4) * 0.4 + 0.6;
+                b0 = 0.99765 * b0 + white * 0.0990460;
+                b1 = 0.96300 * b1 + white * 0.2965164;
+                b2 = 0.57000 * b2 + white * 1.0526913;
+                output[i] = (b0 + b1 + b2) * 0.09 * gustMod;
+            }
+        });
 
         const windNoise = this.audioContext.createBufferSource();
         windNoise.buffer = buffer;
@@ -1442,21 +1467,17 @@ class WhiteNoiseApp {
     }
 
     createForestSound() {
-        // Enhanced forest ambient with leaves rustling
-        const bufferSize = 6 * this.audioContext.sampleRate;
-        const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-        const output = buffer.getChannelData(0);
-
-        // Richer ambient with leaves rustling
-        let b0 = 0, b1 = 0, b2 = 0;
-        for (let i = 0; i < bufferSize; i++) {
-            const white = Math.random() * 2 - 1;
-            const rustleMod = Math.sin(i / this.audioContext.sampleRate * 1.5) * 0.3 + 0.7;
-            b0 = 0.99 * b0 + white * 0.1;
-            b1 = 0.9 * b1 + white * 0.2;
-            b2 = 0.8 * b2 + white * 0.15;
-            output[i] = (b0 + b1 + b2) * 0.06 * rustleMod;
-        }
+        const buffer = this.getCachedMonoBuffer('forest', 6, (output, sampleRate) => {
+            let b0 = 0, b1 = 0, b2 = 0;
+            for (let i = 0; i < output.length; i++) {
+                const white = Math.random() * 2 - 1;
+                const rustleMod = Math.sin(i / sampleRate * 1.5) * 0.3 + 0.7;
+                b0 = 0.99 * b0 + white * 0.1;
+                b1 = 0.9 * b1 + white * 0.2;
+                b2 = 0.8 * b2 + white * 0.15;
+                output[i] = (b0 + b1 + b2) * 0.06 * rustleMod;
+            }
+        });
 
         const ambientNoise = this.audioContext.createBufferSource();
         ambientNoise.buffer = buffer;
@@ -1538,21 +1559,19 @@ class WhiteNoiseApp {
 
     createNightSound() {
         const now = this.audioContext.currentTime;
-        const bufferSize = 10 * this.audioContext.sampleRate;
-        const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-        const output = buffer.getChannelData(0);
+        const buffer = this.getCachedMonoBuffer('night', 10, (output, sampleRate) => {
+            let brown = 0;
+            let breeze = 0;
+            for (let i = 0; i < output.length; i++) {
+                const white = Math.random() * 2 - 1;
+                brown = (brown + white * 0.018) / 1.018;
+                breeze = 0.992 * breeze + white * 0.014;
+                const sway = 0.72 + 0.28 * Math.sin((i / sampleRate) * 0.11 * Math.PI * 2);
+                output[i] = (brown * 0.72 + breeze * 0.35) * 0.06 * sway;
+            }
+        });
         const timeouts = [];
         const crickets = [];
-
-        let brown = 0;
-        let breeze = 0;
-        for (let i = 0; i < bufferSize; i++) {
-            const white = Math.random() * 2 - 1;
-            brown = (brown + white * 0.018) / 1.018;
-            breeze = 0.992 * breeze + white * 0.014;
-            const sway = 0.72 + 0.28 * Math.sin((i / this.audioContext.sampleRate) * 0.11 * Math.PI * 2);
-            output[i] = (brown * 0.72 + breeze * 0.35) * 0.06 * sway;
-        }
 
         const ambientNoise = this.audioContext.createBufferSource();
         ambientNoise.buffer = buffer;
@@ -1685,17 +1704,15 @@ class WhiteNoiseApp {
 
     createClockSound() {
         const now = this.audioContext.currentTime;
-        const burstLength = Math.floor(this.audioContext.sampleRate * 0.16);
-        const burstBuffer = this.audioContext.createBuffer(1, burstLength, this.audioContext.sampleRate);
-        const burstData = burstBuffer.getChannelData(0);
-        let tone = 0;
-
-        for (let i = 0; i < burstLength; i++) {
-            const white = Math.random() * 2 - 1;
-            const decay = Math.exp(-i / (burstLength * 0.16));
-            tone = 0.78 * tone + white * 0.22;
-            burstData[i] = tone * decay * 0.5;
-        }
+        const burstBuffer = this.getCachedMonoBuffer('clock-burst', 0.16, (burstData) => {
+            let tone = 0;
+            for (let i = 0; i < burstData.length; i++) {
+                const white = Math.random() * 2 - 1;
+                const decay = Math.exp(-i / (burstData.length * 0.16));
+                tone = 0.78 * tone + white * 0.22;
+                burstData[i] = tone * decay * 0.5;
+            }
+        });
 
         const outputGain = this.audioContext.createGain();
         outputGain.gain.setValueAtTime(0, now);
