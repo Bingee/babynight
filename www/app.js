@@ -28,7 +28,6 @@ class WhiteNoiseApp {
         this.loadingMusicIndex = -1;
         this.isIOSDevice = this.detectIOSDevice();
         this.iosPlaybackUnlocked = false;
-        this.musicUnlockPromise = null;
         this.themeMediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)') || null;
         this.themeMode = 'system';
         this.musicTracks = [
@@ -989,14 +988,13 @@ class WhiteNoiseApp {
         audio.volume = this.volumeSlider.value / 100;
         audio.muted = false;
         this.updateMusicTrackButtons();
-        const musicUnlockPromise = this.unlockMusicElement(trackUrl);
 
         try {
             this.setPlaybackSession();
-            await musicUnlockPromise;
-            audio.volume = this.volumeSlider.value / 100;
-            audio.muted = false;
-            await audio.play();
+            const playPromise = audio.play();
+            if (playPromise?.then) {
+                await playPromise;
+            }
             this.iosPlaybackUnlocked = true;
             this.loadingMusicIndex = -1;
             this.startTimer();
@@ -1039,9 +1037,14 @@ class WhiteNoiseApp {
     setupIOSSilentModeWorkaround() {
         if (!this.isIOSDevice) return;
 
-        const unlock = async () => {
+        const unlock = async (event) => {
+            if (event.target?.closest?.('.music-track-play')) {
+                return;
+            }
+
             try {
-                await this.preparePlayback();
+                this.setPlaybackSession();
+                await this.unlockWebAudioPlayback();
             } catch (error) {
                 console.warn('iOS audio pre-unlock failed:', error);
             }
@@ -1071,57 +1074,6 @@ class WhiteNoiseApp {
         source.connect(this.audioContext.destination);
         source.start(0);
         source.stop(0.001);
-    }
-
-    async unlockMusicElement(trackUrl) {
-        if (!this.isIOSDevice || this.iosPlaybackUnlocked) {
-            return;
-        }
-
-        if (this.musicUnlockPromise) {
-            return this.musicUnlockPromise;
-        }
-
-        const audio = this.getMusicAudio();
-        const originalSrc = audio.currentSrc || audio.src;
-        const originalVolume = audio.volume;
-        const originalMuted = audio.muted;
-        const unlockTrackPath = trackUrl || this.musicTracks[2]?.url || this.musicTracks[0]?.url;
-        if (!unlockTrackPath) {
-            return;
-        }
-        const unlockSourceUrl = new URL(this.resolveAudioUrl(unlockTrackPath), window.location.href).href;
-
-        audio.src = unlockSourceUrl;
-        audio.load();
-        audio.volume = 0;
-        audio.muted = true;
-
-        this.musicUnlockPromise = (async () => {
-            await audio.play();
-            audio.pause();
-            audio.currentTime = 0;
-            this.iosPlaybackUnlocked = true;
-        })();
-
-        try {
-            await this.musicUnlockPromise;
-        } finally {
-            audio.pause();
-            audio.muted = originalMuted;
-            audio.volume = originalVolume;
-            if (originalSrc && originalSrc !== unlockSourceUrl) {
-                audio.src = originalSrc;
-                audio.load();
-            }
-            this.musicUnlockPromise = null;
-        }
-    }
-
-    async preparePlayback(trackUrl) {
-        this.setPlaybackSession();
-        await this.unlockWebAudioPlayback();
-        await this.unlockMusicElement(trackUrl);
     }
 
     // ===== Sound Generators =====
